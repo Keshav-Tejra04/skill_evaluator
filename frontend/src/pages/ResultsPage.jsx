@@ -1,96 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
-import { AlertTriangle, Brain, Users, Zap, CheckCircle, TrendingUp, ChevronRight, Trophy, Code, Briefcase, Award, ScrollText, Frown, ClipboardCheck } from 'lucide-react';
+import { AlertTriangle, Brain, CheckCircle, Trophy, Code, Briefcase, Award, ScrollText, Frown, ClipboardCheck, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 
-// Radar Chart Data - Resume Derivable Metrics
-const SKILL_DATA = [
-  { subject: 'Tech Stack', A: 40, B: 150, fullMark: 150 }, 
-  { subject: 'Complexity', A: 30, B: 140, fullMark: 150 },     
-  { subject: 'Experience', A: 50, B: 150, fullMark: 150 },     
-  { subject: 'ATS Score', A: 60, B: 100, fullMark: 100 },              
-  { subject: 'Buzzwords', A: 70, B: 120, fullMark: 150 },         
-  { subject: 'Pedigree', A: 40, B: 150, fullMark: 150 },     
-];
-
-// Direct Comparison - Resume Derivable Data Points
-const COMPARISON_METRICS = [
-  { 
-    label: 'Hardest Project', 
-    you: 'Weather App', 
-    sharma: 'Custom Kernel', 
-    icon: Code,
-    status: 'critical' 
-  },
-  { 
-    label: 'Internships', 
-    you: '1 (Unpaid)', 
-    sharma: '3 (MNCs)', 
-    icon: Briefcase,
-    status: 'critical' 
-  },
-  { 
-    label: 'Certifications', 
-    you: 'Udemy PDF', 
-    sharma: 'AWS Architect', 
-    icon: Award,
-    status: 'warning' 
-  },
-  { 
-    label: 'Resume Length', 
-    you: '2 Pages', 
-    sharma: '1 Page', 
-    icon: ScrollText,
-    status: 'warning' 
-  },
-];
-
-const FEEDBACK_CARDS = [
-  {
-    title: "Project Choice",
-    score: "Basic",
-    insight: "You built a 'Calculator'. Sharma Ji's son built a decentralized exchange.",
-    type: "critical"
-  },
-  {
-    title: "Skill Proficiency",
-    score: "Surface Level",
-    insight: "You listed 'Microsoft Word'. He is contributing to the Linux Kernel.",
-    type: "critical"
-  },
-  {
-    title: "Experience Gap",
-    score: "Concerning",
-    insight: "There is a 6-month gap. He launched a startup in his summer break.",
-    type: "warning"
-  }
-];
+// Icon Helper
+const getIconForMetric = (label) => {
+    const l = label.toLowerCase();
+    if (l.includes('code') || l.includes('project')) return Code;
+    if (l.includes('experience') || l.includes('internship')) return Briefcase;
+    if (l.includes('cert') || l.includes('award')) return Award;
+    if (l.includes('len') || l.includes('format')) return ScrollText;
+    return CheckCircle; 
+};
 
 const ResultsPage = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    // Simulate complex analysis
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+  const location = useLocation();
+  const { analysisResult } = location.state || {}; // Get data passed from InputPage
 
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
-        <div className="w-16 h-16 border-4 border-muted border-t-primary rounded-full animate-spin mb-8"></div>
-        <h2 className="text-2xl font-bold mb-2">Analyzing your worth...</h2>
-        <p className="text-muted-foreground">Asking neighbor's son for his resume to compare...</p>
-      </div>
-    );
-  }
+  // Redirect if no data (e.g. user refreshed page or came directly)
+  useEffect(() => {
+    if (!analysisResult) {
+        navigate('/input');
+    }
+  }, [analysisResult, navigate]);
+
+  if (!analysisResult) return null; // Or a loading spinner while redirecting
+
+  // Destructure Data from Intelligence API
+  const { 
+      score, 
+      score_status, 
+      alert_title, 
+      alert_message, 
+      radar_data, 
+      comparison_metrics, 
+      feedback_cards,
+      growth_verdict 
+  } = analysisResult;
 
   return (
     <div className="h-full w-full bg-background flex flex-col overflow-hidden relative"> 
@@ -103,12 +54,7 @@ const ResultsPage = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/5 to-transparent skew-x-12 translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000"></div>
               <h1 className="text-xl font-black tracking-tight text-red-600 dark:text-red-400 drop-shadow-sm">REALITY CHECK REPORT</h1>
             </div>
-            <button 
-                onClick={() => navigate('/chat')}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors text-sm"
-              >
-                <Zap className="w-4 h-4" /> Explain Yourself (Chat)
-            </button>
+            
           </div>
         </div>
       </header>
@@ -130,28 +76,28 @@ const ResultsPage = () => {
                 <div>
                      <h3 className="text-muted-foreground font-medium uppercase tracking-wider text-[11px]">Parental Satisfaction</h3>
                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-4xl font-extrabold text-red-500 tracking-tighter">12</span>
+                        <span className="text-4xl font-extrabold text-red-500 tracking-tighter">{score}</span>
                         <span className="text-sm text-muted-foreground font-medium">/100</span>
                      </div>
                 </div>
                 <div className="mt-auto">
                     <p className="text-xs text-red-600 font-bold bg-red-100 dark:bg-red-900/30 px-2.5 py-1 rounded-md inline-block">
-                        Status: "Log Kya Kahenge?"
+                        {score_status}
                     </p>
                 </div>
             </div>
 
             {/* Main Alert Text (9/12) */}
-            <div className="lg:col-span-9 bg-red-50 border border-red-200 dark:bg-red-900/10 dark:border-red-900/30 rounded-xl p-5 flex items-center gap-5 shadow-sm h-full">
+            <div className="lg:col-span-9 bg-red-50 border border-red-200 dark:bg-red-900/10 dark:border-red-900/30 rounded-xl p-5 flex items-center gap-5 shadow-sm h-full overflow-y-auto custom-scrollbar">
                 <div className="bg-red-100 dark:bg-red-900/20 p-3.5 rounded-full shrink-0">
                     <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="flex flex-col justify-center">
                      <h2 className="text-lg font-bold text-red-900 dark:text-red-100 mb-1">
-                        We found significant gaps in your profile.
+                        {alert_title}
                      </h2>
                      <p className="text-red-800 dark:text-red-200 text-sm italic leading-snug">
-                        "Look at Sharma Ji's son. He knows Kubernetes. You are still Googling 'how to center a div'. What will I tell your uncle at the wedding? He just bought a 3BHK in Bangalore!"
+                        "{alert_message}"
                      </p>
                 </div>
             </div>
@@ -175,7 +121,7 @@ const ResultsPage = () => {
             
             <div className="flex-1 w-full relative min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={SKILL_DATA}>
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radar_data}>
                   <PolarGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 700 }} />
                   <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
@@ -224,25 +170,28 @@ const ResultsPage = () => {
               <Trophy className="w-5 h-5 text-yellow-500" /> Resume Face-Off
             </h3>
             <div className="space-y-3 flex-1 flex flex-col justify-center overflow-y-auto custom-scrollbar min-h-0">
-              {COMPARISON_METRICS.map((metric, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-secondary/30 border border-border">
-                  <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                     <metric.icon className="w-3.5 h-3.5" /> {metric.label}
-                  </div>
-                  
-                  <div className="space-y-1.5">
-                      <div className="flex justify-between items-center text-sm">
-                          <span className="text-xs text-muted-foreground w-8">You</span>
-                          <span className="font-bold text-red-600 truncate text-right flex-1">{metric.you}</span>
+              {comparison_metrics.map((metric, idx) => {
+                  const Icon = getIconForMetric(metric.label);
+                  return (
+                    <div key={idx} className="p-3 rounded-lg bg-secondary/30 border border-border">
+                      <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                         <Icon className="w-3.5 h-3.5" /> {metric.label}
                       </div>
-                      <div className="w-full h-px bg-border/50"></div>
-                      <div className="flex justify-between items-center text-sm">
-                          <span className="text-xs text-muted-foreground w-8">Him</span>
-                          <span className="font-bold text-emerald-600 truncate text-right flex-1">{metric.sharma}</span>
+                      
+                      <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-sm">
+                              <span className="text-xs text-muted-foreground w-8">You</span>
+                              <span className="font-bold text-red-600 truncate text-right flex-1">{metric.you}</span>
+                          </div>
+                          <div className="w-full h-px bg-border/50"></div>
+                          <div className="flex justify-between items-center text-sm">
+                              <span className="text-xs text-muted-foreground w-8">Him</span>
+                              <span className="font-bold text-emerald-600 truncate text-right flex-1">{metric.sharma}</span>
+                          </div>
                       </div>
-                  </div>
-                </div>
-              ))}
+                    </div>
+                  );
+              })}
             </div>
           </motion.div>
         
@@ -254,11 +203,14 @@ const ResultsPage = () => {
              className="lg:col-span-5 flex flex-col gap-4 h-full overflow-hidden"
           >
              <div className="bg-card border border-border p-4 rounded-xl shadow-sm h-full overflow-hidden flex flex-col">
-                 <h3 className="text-base font-bold flex items-center gap-2 mb-4 shrink-0">
-                    <ClipboardCheck className="w-5 h-5 text-blue-500" /> Analysis
+                 <h3 className="text-base font-bold flex items-center gap-2 mb-4 shrink-0 justify-between">
+                    <span className="flex items-center gap-2"><ClipboardCheck className="w-5 h-5 text-blue-500" /> Analysis</span>
+                    {growth_verdict && (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{growth_verdict}</span>
+                    )}
                  </h3>
                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1 min-h-0">
-                    {FEEDBACK_CARDS.map((card, idx) => (
+                    {feedback_cards.map((card, idx) => (
                         <div key={idx} className="relative p-4 rounded-lg border border-border bg-secondary/10 hover:bg-secondary/30 transition-colors group">
                              <div className={clsx(
                                 "absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full",
@@ -279,11 +231,7 @@ const ResultsPage = () => {
                         </div>
                     ))}
                  </div>
-                 <div className="mt-3 shrink-0">
-                    <button className="w-full py-2.5 text-sm font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors flex items-center justify-center gap-1">
-                        View 10-Page Report <ChevronRight className="w-4 h-4" />
-                    </button>
-                 </div>
+
              </div>
           </motion.div>
 

@@ -7,9 +7,37 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate('/upload');
+    setLoading(true);
+
+    const endpoint = isLogin ? 'http://127.0.0.1:8000/login' : 'http://127.0.0.1:8000/register';
+    
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            localStorage.setItem('token', data.access_token);
+            navigate('/input'); // Corrected navigation to existing route
+        } else {
+            alert(data.detail || 'Authentication failed');
+        }
+    } catch (error) {
+        alert('Failed to connect to server. Ensure backend is running.');
+        console.error(error);
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -108,7 +136,10 @@ const AuthPage = () => {
                             <input 
                                 type="email" 
                                 placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-12 py-3 outline-none transition-colors"
+                                required
                             />
                         </div>
                     </div>
@@ -120,16 +151,20 @@ const AuthPage = () => {
                             <input 
                                 type="password" 
                                 placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-12 py-3 outline-none transition-colors"
+                                required
                             />
                         </div>
                     </div>
 
                     <button 
                         type="submit"
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-3 rounded-xl shadow-md transition-colors"
+                        disabled={loading}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-3 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isLogin ? 'Sign In' : 'Create Free Account'}
+                        {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Free Account')}
                     </button>
                 </form>
 

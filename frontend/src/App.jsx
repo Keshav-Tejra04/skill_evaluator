@@ -15,9 +15,10 @@ const App = () => {
       <main className="flex-1 w-full relative overflow-hidden flex flex-col">
         <Routes>
           <Route path="/" element={<AuthPage />} />
-          <Route path="/upload" element={<InputPage />} />
+          <Route path="/input" element={<InputPage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="*" element={<AuthPage />} />
         </Routes>
       </main>
     </div>
