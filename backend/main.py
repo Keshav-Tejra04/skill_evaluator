@@ -55,12 +55,37 @@ def login(form_data: schemas.UserCreate, db: Session = Depends(database.get_db))
     access_token = auth.create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+# --- Profile Routes ---
+@app.get("/profile", response_model=schemas.User)
+def get_profile(current_user: models.User = Depends(auth.get_current_user)):
+    return current_user
+
+@app.put("/profile", response_model=schemas.User)
+def update_profile(
+    profile_data: schemas.ProfileUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if profile_data.age is not None:
+        user.age = profile_data.age
+    if profile_data.current_status is not None:
+        user.current_status = profile_data.current_status
+    if profile_data.target_role is not None:
+        user.target_role = profile_data.target_role
+    
+    db.commit()
+    db.refresh(user)
+    return user
+
 # --- Analysis Route ---
 @app.post("/analyze", response_model=schemas.AnalysisResponse)
 async def analyze_profile(
     target_role: str = Form(...),
     manual_data: str = Form(None), # JSON string
     file: UploadFile = File(None),
+    age: int = Form(None),
+    current_status: str = Form(None),
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
@@ -69,6 +94,16 @@ async def analyze_profile(
     Accepts EITHER a file OR manual_data JSON string.
     """
     
+    # 0. Update User Profile if provided
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if age:
+        user.age = age
+    if current_status:
+        user.current_status = current_status
+    if target_role:
+        user.target_role = target_role # Update default role
+    db.commit()
+
     # 1. Parse Input
     profile_text = ""
     if manual_data:
@@ -97,18 +132,21 @@ async def analyze_profile(
     else:
         raise HTTPException(status_code=400, detail="Either file or manual_data is required")
 
-    # 2. Check History for Growth
+    # 2. History Context (Simplified, no date judgment)
     last_entry = db.query(models.ResumeEntry).filter(models.ResumeEntry.user_id == current_user.id).order_by(models.ResumeEntry.created_at.desc()).first()
     
-    history_context = "This is the user's FIRST submission. Roast them freshly."
+    history_context = "First submission."
     if last_entry:
-        days_gap = (datetime.utcnow() - last_entry.created_at).days
         prev_score = last_entry.score or 0
-        history_context = f"User submitted previously {days_gap} days ago. Previous Score: {prev_score}/100. Compare this new submission to see if they improved or wasted time."
+        history_context = f"Previous Score: {prev_score}/100. (User is retrying/improving)."
 
     # 3. Call AI
+    # Use defaults if not provided in form (fallback to profile)
+    final_age = age if age else (user.age or "Unknown")
+    final_status = current_status if current_status else (user.current_status or "Unknown")
+
     try:
-        ai_result = gemini_service.analyze_profile_with_ai(target_role, profile_text, history_context)
+        ai_result = gemini_service.analyze_profile_with_ai(target_role, profile_text, str(final_age), final_status, history_context)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Analysis Failure: {str(e)}")
     
@@ -117,7 +155,9 @@ async def analyze_profile(
         user_id=current_user.id,
         raw_text=profile_text,
         analysis_json=json.dumps(ai_result),
-        score=ai_result.get("score", 0)
+        score=ai_result.get("score", 0),
+        age_at_time=age,
+        status_at_time=current_status
     )
     db.add(new_entry)
     db.commit()

@@ -55,6 +55,12 @@ const ResultsPage = () => {
               <h1 className="text-xl font-black tracking-tight text-red-600 dark:text-red-400 drop-shadow-sm">REALITY CHECK REPORT</h1>
             </div>
             
+            <button 
+                onClick={() => navigate('/input')}
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 border px-4 py-2 rounded-lg hover:border-primary/50"
+            >
+                <ClipboardCheck className="w-4 h-4" /> Update Info & Retry
+            </button>
           </div>
         </div>
       </header>

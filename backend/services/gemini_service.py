@@ -10,12 +10,12 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel('gemini-flash-latest')
 
-def analyze_profile_with_ai(target_role: str, profile_text: str, history_context: str = "First time submission."):
+def analyze_profile_with_ai(target_role: str, profile_text: str, age: str, current_status: str, history_context: str = "First time submission."):
     """
     Sends a single-shot prompt to Gemini to analyze the profile and return structured JSON.
     """
     # Construct the filled prompt using simple replacement to avoid formatting errors with JSON braces
-    prompt = SYSTEM_PROMPT.replace("{target_role}", target_role).replace("{profile_data}", profile_text).replace("{history_context}", history_context)
+    prompt = SYSTEM_PROMPT.replace("{target_role}", target_role).replace("{profile_data}", profile_text).replace("{history_context}", history_context).replace("{age}", str(age)).replace("{current_status}", current_status)
 
     # Generate content
     response = model.generate_content(prompt)

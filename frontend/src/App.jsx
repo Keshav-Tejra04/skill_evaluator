@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import AuthPage from './pages/AuthPage';
 import InputPage from './pages/InputPage';
 import ResultsPage from './pages/ResultsPage';
+import ProfilePage from './pages/ProfilePage';
 import ChatPage from './pages/ChatPage';
 
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<AuthPage />} />
           <Route path="/input" element={<InputPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="*" element={<AuthPage />} />

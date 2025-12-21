@@ -8,187 +8,265 @@ const InputPage = () => {
     const navigate = useNavigate();
     const [file, setFile] = useState(null);
     const [role, setRole] = useState('');
-    const [isDragging, setIsDragging] = useState(false);
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'manual'
-  const [loading, setLoading] = useState(false);
-  const [manualData, setManualData] = useState({
-    skills: '',
-    experience: '',
-    projects: '',
-    custom_field: ''
-  });
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleManualChange = (e) => {
-    setManualData({ ...manualData, [e.target.name]: e.target.value });
-  };
-
-  const handleAnalyze = async () => {
-    if (!role) { alert('Please select a target role'); return; }
+    const [customRole, setCustomRole] = useState('');
+    const [age, setAge] = useState('');
+    const [status, setStatus] = useState('');
     
-    setLoading(true);
-    const formData = new FormData();
-    formData.append('target_role', role);
+    const [isDragging, setIsDragging] = useState(false);
+    const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'manual'
+    const [loading, setLoading] = useState(false);
+    const [manualData, setManualData] = useState({
+        skills: '',
+        experience: '',
+        projects: '',
+        custom_field: ''
+    });
 
-    if (activeTab === 'upload') {
-        if (!file) { alert('Please upload a file'); setLoading(false); return; }
-        formData.append('file', file);
-    } else {
-        // Build the manual data string/json
-        const jsonPayload = JSON.stringify({
-            target_role: role,
-            ...manualData
-        });
-        formData.append('manual_data', jsonPayload);
-    }
+    React.useEffect(() => {
+        // Fetch User Profile on mount to pre-fill
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
 
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert("You must be logged in!");
-            navigate('/');
-            return;
+            try {
+                const res = await fetch('http://127.0.0.1:8000/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.age) setAge(data.age);
+                    if (data.current_status) setStatus(data.current_status);
+                    
+                    // Handle pre-filling role
+                    if (data.target_role) {
+                        const defaultRoles = ["frontend-dev", "backend-dev", "data-scientist", "product-manager", "financial-analyst"];
+                        if (defaultRoles.includes(data.target_role)) {
+                            setRole(data.target_role);
+                        } else {
+                            setRole("other");
+                            setCustomRole(data.target_role);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load profile", e);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            setFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+        }
+    };
+
+    const handleManualChange = (e) => {
+        setManualData({ ...manualData, [e.target.name]: e.target.value });
+    };
+
+    const handleAnalyze = async () => {
+        if (!role) { alert('Please select a target role'); return; }
+        if (role === 'other' && !customRole) { alert('Please enter your custom role'); return; }
+        if (!age) { alert('Please enter your age'); return; }
+        if (!status) { alert('Please select your current status'); return; }
+        
+        setLoading(true);
+        const formData = new FormData();
+        
+        // Final Role Logic
+        const finalRole = role === 'other' ? customRole : role;
+        formData.append('target_role', finalRole);
+        formData.append('age', age);
+        formData.append('current_status', status);
+
+        if (activeTab === 'upload') {
+            if (!file) { alert('Please upload a file'); setLoading(false); return; }
+            formData.append('file', file);
+        } else {
+            // Build the manual data string/json
+            const jsonPayload = JSON.stringify({
+                target_role: finalRole,
+                ...manualData
+            });
+            formData.append('manual_data', jsonPayload);
         }
 
-        const response = await fetch('http://127.0.0.1:8000/analyze', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: formData
-        });
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("You must be logged in!");
+                navigate('/');
+                return;
+            }
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || 'Analysis failed');
+            const response = await fetch('http://127.0.0.1:8000/analyze', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Analysis failed');
+            }
+
+            const result = await response.json();
+            navigate('/results', { state: { analysisResult: result } });
+
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setLoading(false);
         }
+    };
 
-        const result = await response.json();
-        navigate('/results', { state: { analysisResult: result } });
+    return (
+        <div className="min-h-screen pt-24 pb-12 px-4 flex flex-col items-center justify-center bg-background relative">
+            <div className="absolute inset-0 static-grid pointer-events-none opacity-[0.3]"></div>
+            
+            <div className="container max-w-5xl relative z-10">
+                <div className="text-center mb-10">
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
+                            Let's <span className="text-primary">Audit</span> Your Career
+                        </h1>
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                            Upload your resume or tell us who you pretend to be. Prepare for reality.
+                        </p>
+                    </motion.div>
+                </div>
 
-    } catch (error) {
-        alert(error.message);
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen pt-24 pb-12 px-4 flex flex-col items-center justify-center bg-background relative">
-      <div className="absolute inset-0 static-grid pointer-events-none opacity-[0.3]"></div>
-      
-      <div className="container max-w-4xl relative z-10">
-        <div className="text-center mb-12">
-          <motion.div
-             initial={{ opacity: 0, y: 10 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.3 }}
-          >
-              <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">
-                Let's <span className="text-primary">Audit</span> Your Career
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Upload your resume or tell us who you pretend to be. Prepare for reality.
-              </p>
-          </motion.div>
-        </div>
-
-        <motion.div
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
-          className="bg-card p-6 md:p-10 rounded-3xl border border-border shadow-sm"
-        >
-          {/* Tab Switcher */}
-          <div className="flex justify-center mb-8">
-              <div className="bg-secondary/50 p-1 rounded-xl flex gap-1">
-                  <button 
-                    onClick={() => setActiveTab('upload')}
-                    className={clsx(
-                        "px-6 py-2 rounded-lg text-sm font-bold transition-all",
-                        activeTab === 'upload' ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Upload Resume
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('manual')}
-                    className={clsx(
-                        "px-6 py-2 rounded-lg text-sm font-bold transition-all",
-                        activeTab === 'manual' ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Manual Entry
-                  </button>
-              </div>
-          </div>
+                <motion.div
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.1, duration: 0.3 }}
+                    className="bg-card p-6 md:p-8 rounded-3xl border border-border shadow-sm"
+                >
+                    {/* Tab Switcher */}
+                    <div className="flex justify-center mb-6">
+                        <div className="bg-secondary/50 p-1 rounded-xl flex gap-1">
+                            <button 
+                                onClick={() => setActiveTab('upload')}
+                                className={clsx(
+                                    "px-6 py-2 rounded-lg text-sm font-bold transition-all",
+                                    activeTab === 'upload' ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Upload Resume
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('manual')}
+                                className={clsx(
+                                    "px-6 py-2 rounded-lg text-sm font-bold transition-all",
+                                    activeTab === 'manual' ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Manual Entry
+                            </button>
+                        </div>
+                    </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
               
-              {/* Left Side: Common Job Role Selection */}
+              {/* Left Side: Detail Selection */}
               <div className="space-y-6">
+                  
+                  {/* Age & Status Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-bold block mb-2">Age</label>
+                        <input 
+                            type="number"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            placeholder="e.g. 24"
+                            className="w-full bg-secondary/30 border border-input rounded-xl px-4 py-3 outline-none focus:border-primary transition-colors"
+                        />
+                    </div>
+                    <div>
+                         <label className="text-sm font-bold block mb-2">Status</label>
+                         <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="w-full bg-secondary/30 border border-input rounded-xl px-4 py-3 outline-none focus:border-primary appearance-none cursor-pointer"
+                         >
+                             <option value="">Select...</option>
+                             <option value="Student">Student</option>
+                             <option value="Professional">Professional</option>
+                             <option value="Freelancer">Freelancer</option>
+                             <option value="Unemployed">Unemployed</option>
+                             <option value="Founder">Founder</option>
+                         </select>
+                    </div>
+                  </div>
+
                   <div>
                       <label className="text-lg font-bold flex items-center gap-2 mb-4">
                           <Briefcase className="w-5 h-5 text-primary" />
-                          Target Job Title / Field
+                          Target Job Title
                       </label>
-                      <div className="relative">
-                          {/* If manual, allow typing raw job role to leverage 'Universal' AI */}
-                          {activeTab === 'manual' ? (
-                              <input 
+                      <div className="space-y-3">
+                          <select
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
-                                placeholder="e.g. Potter, Rocket Scientist, Influencer..."
-                                className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-4 py-4 text-lg outline-none transition-colors"
-                              />
-                          ) : (
-                              <select
-                                  value={role}
-                                  onChange={(e) => setRole(e.target.value)}
-                                  className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-4 py-4 text-lg outline-none transition-colors appearance-none cursor-pointer"
-                              >
-                                  <option value="">Select target role...</option>
-                                  <option value="frontend-dev">Frontend Developer</option>
-                                  <option value="backend-dev">Backend Developer</option>
-                                  <option value="data-scientist">Data Scientist</option>
-                                  <option value="product-manager">Product Manager</option>
-                                  <option value="financial-analyst">Financial Analyst</option>
-                              </select>
-                          )}
+                                className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-4 py-4 text-lg outline-none transition-colors appearance-none cursor-pointer"
+                            >
+                                <option value="">Select target role...</option>
+                                <option value="frontend-dev">Frontend Developer</option>
+                                <option value="backend-dev">Backend Developer</option>
+                                <option value="data-scientist">Data Scientist</option>
+                                <option value="product-manager">Product Manager</option>
+                                <option value="financial-analyst">Financial Analyst</option>
+                                <option value="other">Other (Enter Custom)</option>
+                            </select>
+
+                            {/* Custom Role Input */}
+                            {role === 'other' && (
+                                <motion.input 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    value={customRole}
+                                    onChange={(e) => setCustomRole(e.target.value)}
+                                    placeholder="Enter your specific role (e.g. AI Ethics Officer)"
+                                    className="w-full bg-secondary/30 border border-input focus:border-primary focus:bg-background rounded-xl px-4 py-3 text-base outline-none transition-colors"
+                                />
+                            )}
                       </div>
                   </div>
 
                   <div className="bg-primary/5 p-6 rounded-xl border border-primary/10">
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-500" /> Analysis Points
+                          <CheckCircle2 className="w-4 h-4 text-green-500" /> New Analysis V2
                       </h4>
                       <ul className="space-y-2 text-sm text-muted-foreground ml-6 list-disc">
-                           <li>Skill Gap Analysis</li>
-                           <li>"Sharma Ji" Comparative Logic</li>
-                           <li>Growth Trajectory Check</li>
-                           <li>Brutal Reality Feedback</li>
+                           <li>Constructive Satire Mode</li>
+                           <li>Age-Appropriate Expectations</li>
+                           <li>Context-Aware Roasts</li>
+                           <li>Detailed Metrics</li>
                       </ul>
                   </div>
               </div>

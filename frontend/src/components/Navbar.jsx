@@ -9,9 +9,11 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   // Determine if user is "logged in" based on route
-  const isLoggedIn = ['/upload', '/results', '/chat'].includes(location.pathname);
+  // Simple check: if not on login page
+  const isLoggedIn = location.pathname !== '/' && location.pathname !== '/auth';
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     navigate('/');
     setIsDropdownOpen(false);
   };
@@ -35,7 +37,7 @@ const Navbar = () => {
                         <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                           <User className="w-4 h-4" />
                         </div>
-                        <span className="text-foreground font-semibold text-xs">Guest User</span>
+                        <span className="text-foreground font-semibold text-xs">Menu</span>
                         <ChevronDown className="w-3 h-3 text-muted-foreground" />
                   </button>
 
@@ -44,9 +46,16 @@ const Navbar = () => {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
                       <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                         <Link 
+                            to="/profile" 
+                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                            onClick={() => setIsDropdownOpen(false)}
+                        >
+                            <User className="w-4 h-4" /> Profile
+                        </Link>
                         <button 
                             onClick={handleLogout}
-                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 font-medium"
                         >
                             <LogOut className="w-4 h-4" /> Logout
                         </button>

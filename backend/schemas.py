@@ -12,9 +12,17 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: int
     created_at: datetime
-    
+    age: Optional[int] = None
+    current_status: Optional[str] = None
+    target_role: Optional[str] = None
+
     class Config:
         from_attributes = True
+
+class ProfileUpdate(BaseModel):
+    age: Optional[int] = None
+    current_status: Optional[str] = None
+    target_role: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str

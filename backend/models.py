@@ -10,8 +10,13 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Profile Fields
+    age = Column(Integer, nullable=True) 
+    current_status = Column(String, nullable=True) # e.g. "Student", "Professional", "Unemployed"
+    target_role = Column(String, nullable=True) # Default target role
 
-    resumes = relationship("ResumeEntry", back_populates="owner")
+    entries = relationship("ResumeEntry", back_populates="user")
 
 class ResumeEntry(Base):
     __tablename__ = "resume_entries"
@@ -29,5 +34,9 @@ class ResumeEntry(Base):
     # Meta
     score = Column(Integer) # Extracted score for easy querying
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Snapshot of user state at time of analysis
+    age_at_time = Column(Integer, nullable=True)
+    status_at_time = Column(String, nullable=True)
 
-    owner = relationship("User", back_populates="resumes")
+    user = relationship("User", back_populates="entries")
