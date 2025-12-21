@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* GitHub Light Theme Inspired */
+    --background: 0 0% 100%;
+    --foreground: 210 9% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 9% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 9% 16%;
+
+    --primary: 212 92% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 29% 97%;
+    --secondary-foreground: 210 9% 16%;
+
+    --muted: 210 29% 97%;
+    --muted-foreground: 215 8% 47%;
+
+    --accent: 210 29% 97%;
+    --accent-foreground: 210 9% 16%;
+
+    --destructive: 354 85% 44%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 18% 84%;
+    --input: 210 18% 84%;
+    --ring: 212 92% 45%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* GitHub Dark Theme Inspired */
+    --background: 220 20% 5%;
+    --foreground: 212 12% 82%;
+
+    --card: 215 21% 11%;
+    --card-foreground: 212 12% 82%;
+
+    --popover: 215 21% 11%;
+    --popover-foreground: 212 12% 82%;
+
+    --primary: 212 100% 67%;
+    --primary-foreground: 216 28% 7%;
+
+    --secondary: 215 21% 11%;
+    --secondary-foreground: 212 12% 82%;
+
+    --muted: 215 21% 11%;
+    --muted-foreground: 212 9% 55%;
+
+    --accent: 216 28% 11%;
+    --accent-foreground: 212 12% 82%;
+
+    --destructive: 354 66% 47%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 14% 21%;
+    --input: 215 14% 21%;
+    --ring: 212 100% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Ensure Full Height Layout */
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Prevent body scroll, handle in Main */
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Static Utilities - Optimized for Performance */
+@layer utilities {
+  .glass {
+    @apply bg-white dark:bg-zinc-900 border border-border shadow-sm;
+  }
+
+  .glass-card {
+    @apply bg-card border border-border hover:border-primary/50 transition-colors duration-200;
+  }
+}
+
+/* Static Background Grid (No Animation) */
+.static-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
+}
