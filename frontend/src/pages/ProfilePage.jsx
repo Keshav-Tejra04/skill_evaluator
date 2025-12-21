@@ -7,6 +7,7 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [showRerunModal, setShowRerunModal] = useState(false);
     
     // Form State
     const [formData, setFormData] = useState({
@@ -62,7 +63,8 @@ const ProfilePage = () => {
             });
             
             if (res.ok) {
-                alert("Profile Saved!");
+                // Show Rerun Modal
+                setShowRerunModal(true);
             } else {
                 alert("Failed to save");
             }
@@ -71,6 +73,38 @@ const ProfilePage = () => {
             alert("Error saving profile");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleRerun = async () => {
+        setSaving(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('http://127.0.0.1:8000/analyze/rerun', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const result = await res.json();
+                navigate('/results', { state: { analysisResult: result } });
+            } else {
+                alert("Could not re-run analysis (maybe no history?).");
+                setShowRerunModal(false);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to connect for re-run");
+            setShowRerunModal(false);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/input');
         }
     };
 
@@ -86,10 +120,10 @@ const ProfilePage = () => {
             <div className="container max-w-2xl relative z-10">
                 <div className="mb-8 flex items-center justify-between">
                     <button 
-                        onClick={() => navigate('/input')}
+                        onClick={handleBack}
                         className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5" /> Back to Analysis
+                        <ArrowLeft className="w-5 h-5" /> Back
                     </button>
                     <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                         <User className="w-8 h-8 text-primary" /> Your Profile
@@ -105,14 +139,14 @@ const ProfilePage = () => {
                 <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-card border border-border rounded-3xl p-8 shadow-sm"
+                    className="bg-card border border-border rounded-3xl p-8 shadow-sm relative overflow-hidden"
                 >
                     {loading ? (
                         <div className="text-center py-10">Loading profile...</div>
                     ) : (
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold ml-1">Default Age</label>
+                                <label className="text-sm font-bold ml-1">Age</label>
                                 <input 
                                     type="number"
                                     value={formData.age}
@@ -128,7 +162,7 @@ const ProfilePage = () => {
                                 <select 
                                     value={formData.current_status}
                                     onChange={(e) => setFormData({...formData, current_status: e.target.value})}
-                                    className="w-full bg-secondary/30 border border-input rounded-xl px-4 py-3 outline-none focus:border-primary appearance-none cursor-pointer"
+                                    className="w-full bg-secondary/30 border border-input rounded-xl px-4 py-3 outline-none focus:border-primary appearance-none cursor-pointer bg-card text-foreground"
                                 >
                                      <option value="">Select...</option>
                                      <option value="Student">Student</option>
@@ -159,6 +193,36 @@ const ProfilePage = () => {
                                     {saving ? 'Saving...' : <><Save className="w-5 h-5" /> Save Changes</>}
                                 </button>
                             </div>
+                        </div>
+                    )}
+                    
+                    {/* Re-Run Modal Overlay */}
+                    {showRerunModal && (
+                        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+                             <div className="text-center space-y-4 max-w-sm">
+                                 <div className="mx-auto w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center text-primary mb-2">
+                                    <User className="w-6 h-6" />
+                                 </div>
+                                 <h3 className="text-xl font-bold">Profile Updated!</h3>
+                                 <p className="text-muted-foreground text-sm">
+                                    Do you want to re-run your last analysis with these new details?
+                                 </p>
+                                 <div className="flex gap-3 pt-2">
+                                      <button 
+                                        onClick={() => setShowRerunModal(false)}
+                                        className="flex-1 px-4 py-2 rounded-lg font-medium text-muted-foreground hover:bg-secondary transition-colors"
+                                      >
+                                        No, stay here
+                                      </button>
+                                      <button 
+                                        onClick={handleRerun}
+                                        disabled={saving}
+                                        className="flex-1 px-4 py-2 rounded-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                      >
+                                        {saving ? 'Analyzing...' : 'Yes, Re-Evaluate Me'}
+                                      </button>
+                                 </div>
+                             </div>
                         </div>
                     )}
                 </motion.div>

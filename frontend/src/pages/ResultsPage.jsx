@@ -119,10 +119,14 @@ const ResultsPage = () => {
             transition={{ delay: 0.1 }}
             className="lg:col-span-4 bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col h-full overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-2 shrink-0">
-              <h3 className="text-base font-bold flex items-center gap-2">
+            <div className="flex items-center justify-between mb-2 shrink-0 group relative">
+              <h3 className="text-base font-bold flex items-center gap-2 cursor-help">
                 <Brain className="w-5 h-5 text-primary" /> Career Potential
               </h3>
+               {/* Tooltip on Hover */}
+               <div className="absolute left-0 top-6 bg-popover text-popover-foreground text-xs p-2 rounded border shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 w-64">
+                   Compares your profile against "Sharma Ji's Beta" (The Perfect Candidate for this Role) across 6 key dimensions.
+               </div>
             </div>
             
             <div className="flex-1 w-full relative min-h-0">
@@ -173,7 +177,7 @@ const ResultsPage = () => {
             className="lg:col-span-3 bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col h-full overflow-hidden"
           >
             <h3 className="text-base font-bold flex items-center gap-2 mb-4 shrink-0">
-              <Trophy className="w-5 h-5 text-yellow-500" /> Resume Face-Off
+              <Trophy className="w-5 h-5 text-yellow-500" /> Face-Off
             </h3>
             <div className="space-y-3 flex-1 flex flex-col justify-center overflow-y-auto custom-scrollbar min-h-0">
               {comparison_metrics.map((metric, idx) => {
@@ -209,11 +213,8 @@ const ResultsPage = () => {
              className="lg:col-span-5 flex flex-col gap-4 h-full overflow-hidden"
           >
              <div className="bg-card border border-border p-4 rounded-xl shadow-sm h-full overflow-hidden flex flex-col">
-                 <h3 className="text-base font-bold flex items-center gap-2 mb-4 shrink-0 justify-between">
-                    <span className="flex items-center gap-2"><ClipboardCheck className="w-5 h-5 text-blue-500" /> Analysis</span>
-                    {growth_verdict && (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{growth_verdict}</span>
-                    )}
+                 <h3 className="text-base font-bold flex items-center gap-2 mb-4 shrink-0">
+                    <ClipboardCheck className="w-5 h-5 text-blue-500" /> Analysis
                  </h3>
                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1 min-h-0">
                     {feedback_cards.map((card, idx) => (
@@ -236,12 +237,49 @@ const ResultsPage = () => {
                              </div>
                         </div>
                     ))}
-                 </div>
+                  </div>
 
-             </div>
-          </motion.div>
+              </div>
+           </motion.div>
 
         </div>
+         
+         {/* Row 4: Overall Summary (New Section) */}
+         {analysisResult.overall_summary && (
+            <motion.div 
+               initial={{ opacity: 0, y: 15 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.35 }}
+               className="bg-card border border-border p-4 rounded-xl shadow-sm shrink-0"
+            >
+                <h3 className="text-base font-bold flex items-center gap-2 mb-2">
+                   <ScrollText className="w-5 h-5 text-orange-500" /> Executive Summary
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                   "{analysisResult.overall_summary}"
+                </p>
+            </motion.div>
+         )}
+
+         {/* Row 5: Verdict Summary - Full Width Bottom */}
+         {growth_verdict && (
+             <motion.div 
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: 0.4 }}
+                 className="shrink-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4 flex items-center gap-4"
+             >
+                 <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center shrink-0">
+                     <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                 </div>
+                 <div>
+                      <h4 className="font-bold text-purple-900 dark:text-purple-100 text-sm uppercase tracking-wider mb-1">Final Verdict</h4>
+                      <p className="text-sm text-foreground font-medium leading-normal">
+                          {growth_verdict}
+                      </p>
+                 </div>
+             </motion.div>
+         )}
 
       </main>
     </div>

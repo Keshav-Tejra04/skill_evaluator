@@ -56,23 +56,23 @@ const AuthPage = () => {
             >
                 <div>
                     <span className="inline-block px-3 py-1 mb-4 text-xs font-semibold text-primary bg-primary/10 rounded-full">
-                        AI-Powered Career Audits
+                        Career Reality Check
                     </span>
                     <h1 className="text-5xl font-extrabold leading-tight tracking-tight">
-                        Join the Top 1% of <br />
-                        <span className="text-primary">Professionals.</span>
+                        See if you measure up to <br />
+                        <span className="text-primary">The Perfect Candidate.</span>
                     </h1>
                 </div>
                 
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                    Stop submitting resumes into the black hole. Get the insights you need to beat the ATS and impress hiring managers.
+                    Most resumes are ignored. Yours might be one of them. Find out exactly why, and how to fix it before you hit apply.
                 </p>
 
                 <div className="space-y-4">
                     {[
-                        "Instant Resume Scoring vs. Market Leaders",
-                        "Personalized Upskilling Roadmap",
-                        "Mock Interviews with AI Persona"
+                        "Brutally Honest AI Analysis",
+                        "Role-Specific Competency Scoring",
+                        "Actionable Gap Analysis"
                     ].map((item, i) => (
                         <div key={i} className="flex items-center gap-4 bg-muted/30 p-4 rounded-xl border border-border">
                             <div className="bg-primary/20 text-primary p-2 rounded-full">
@@ -83,19 +83,7 @@ const AuthPage = () => {
                     ))}
                 </div>
                 
-                <div className="pt-8 flex items-center gap-4 border-t border-border mt-8">
-                     <div className="flex -space-x-4">
-                        {[1,2,3,4].map(i => (
-                            <div key={i} className="w-12 h-12 rounded-full border-2 border-background bg-zinc-200 flex items-center justify-center overflow-hidden">
-                                <span className="text-xs font-bold text-zinc-500">U{i}</span>
-                            </div>
-                        ))}
-                     </div>
-                     <div>
-                         <p className="font-bold">10,000+ Users</p>
-                         <p className="text-sm text-muted-foreground">Trusted by devs from FAANG</p>
-                     </div>
-                </div>
+                {/* Removed Fake Stats Section */}
             </motion.div>
 
             {/* Right Side - Auth Form */}

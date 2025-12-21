@@ -156,12 +156,50 @@ async def analyze_profile(
         raw_text=profile_text,
         analysis_json=json.dumps(ai_result),
         score=ai_result.get("score", 0),
-        age_at_time=age,
-        status_at_time=current_status
+        age_at_time=final_age if isinstance(final_age, int) else None,
+        status_at_time=final_status
     )
     db.add(new_entry)
     db.commit()
     
+    return ai_result
+
+@app.post("/analyze/rerun", response_model=schemas.AnalysisResponse)
+def rerun_analysis(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    # 1. Fetch Latest Resume Entry
+    last_entry = db.query(models.ResumeEntry).filter(models.ResumeEntry.user_id == current_user.id).order_by(models.ResumeEntry.created_at.desc()).first()
+    
+    if not last_entry:
+        raise HTTPException(status_code=400, detail="No previous analysis found. Please run a new analysis first.")
+
+    # 2. Get User Profile Data (New Data)
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    final_age = user.age or "Unknown"
+    final_status = user.current_status or "Unknown"
+    target_role = user.target_role or "General"
+
+    # 3. Call AI
+    try:
+        # Use previous raw text + new context
+        ai_result = gemini_service.analyze_profile_with_ai(target_role, last_entry.raw_text, str(final_age), final_status, "Re-run of previous profile with updated context.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Re-Run Failure: {str(e)}")
+
+    # 4. Save as NEW Entry (to keep history)
+    new_entry = models.ResumeEntry(
+        user_id=current_user.id,
+        raw_text=last_entry.raw_text,
+        analysis_json=json.dumps(ai_result),
+        score=ai_result.get("score", 0),
+        age_at_time=user.age,
+        status_at_time=user.current_status
+    )
+    db.add(new_entry)
+    db.commit()
+
     return ai_result
 
 @app.get("/")
