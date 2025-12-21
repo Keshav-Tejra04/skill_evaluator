@@ -96,17 +96,18 @@ const ResultsPage = () => {
     <div className="h-full w-full bg-background flex flex-col overflow-hidden relative"> 
       
       {/* Header - Fixed Height, No Scroll */}
-      <header className="z-40 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 shrink-0">
+      <header className="z-40 bg-background/80 backdrop-blur-md transition-all duration-300 shrink-0">
         <div className="w-full px-6 md:px-12 py-2">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-red-600 dark:text-red-400">REALITY CHECK REPORT</h1>
+            <div className="bg-red-500/5 backdrop-blur-xl border border-red-500/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-2xl px-6 py-2 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/5 to-transparent skew-x-12 translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000"></div>
+              <h1 className="text-xl font-black tracking-tight text-red-600 dark:text-red-400 drop-shadow-sm">REALITY CHECK REPORT</h1>
             </div>
             <button 
                 onClick={() => navigate('/chat')}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors text-xs"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors text-sm"
               >
-                <Zap className="w-3 h-3" /> Explain Yourself (Chat)
+                <Zap className="w-4 h-4" /> Explain Yourself (Chat)
             </button>
           </div>
         </div>
@@ -123,8 +124,8 @@ const ResultsPage = () => {
         >
             {/* Score Card (3/12) */}
             <div className="lg:col-span-3 bg-card border border-border rounded-xl p-4 flex flex-col justify-between shadow-sm relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <Frown className="w-20 h-20" />
+                <div className="absolute top-1/2 right-4 -translate-y-1/2 opacity-15">
+                    <Frown className="w-24 h-24" />
                 </div>
                 <div>
                      <h3 className="text-muted-foreground font-medium uppercase tracking-wider text-[11px]">Parental Satisfaction</h3>
@@ -174,10 +175,10 @@ const ResultsPage = () => {
             
             <div className="flex-1 w-full relative min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={SKILL_DATA}>
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={SKILL_DATA}>
                   <PolarGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 700 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} />
+                  <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
                   <Radar
                     name="You"
                     dataKey="A"
@@ -195,7 +196,8 @@ const ResultsPage = () => {
                     fillOpacity={0.2}
                   />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))', fontSize: '13px' }}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))', fontSize: '13px', color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
