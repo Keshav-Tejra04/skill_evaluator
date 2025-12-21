@@ -144,7 +144,7 @@ const ResultsPage = () => {
                     fillOpacity={0.2}
                   />
                   <Radar
-                    name="Sharma Ji"
+                    name="Sharma Ji Ka Beta"
                     dataKey="B"
                     stroke="#10b981"
                     strokeWidth={3}
@@ -164,7 +164,7 @@ const ResultsPage = () => {
                   <span className="w-3 h-3 rounded-full bg-indigo-500"></span> You
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Sharma Ji
+                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Sharma Ji Ka Beta
                 </div>
             </div>
           </motion.div>

@@ -202,6 +202,21 @@ def rerun_analysis(
 
     return ai_result
 
+@app.get("/analysis/latest", response_model=schemas.AnalysisResponse)
+def get_latest_analysis(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Retrieve the most recent analysis for the current user.
+    """
+    last_entry = db.query(models.ResumeEntry).filter(models.ResumeEntry.user_id == current_user.id).order_by(models.ResumeEntry.created_at.desc()).first()
+    
+    if not last_entry:
+        raise HTTPException(status_code=404, detail="No analysis found")
+        
+    return json.loads(last_entry.analysis_json)
+
 @app.get("/")
 def read_root():
     return {"status": "Skill Evaluator Backend is Running"}
