@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Github, ArrowRight, Check } from 'lucide-react';
+import authService from '../services/auth.service';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,43 +16,27 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    const endpoint = isLogin ? 'http://127.0.0.1:8000/login' : 'http://127.0.0.1:8000/register';
-    
     try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            const token = data.access_token;
-            localStorage.setItem('token', token);
-
-            // Attempt to fetch latest analysis
-            try {
-                const historyRes = await fetch('http://127.0.0.1:8000/analysis/latest', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (historyRes.ok) {
-                    const historyData = await historyRes.json();
-                    navigate('/results', { state: { analysisResult: historyData } });
-                } else {
-                    navigate('/input');
-                }
-            } catch (err) {
-                console.error("History fetch failed", err);
-                navigate('/input');
-            }
+        let data;
+        if (isLogin) {
+            data = await authService.login(email, password);
         } else {
-            alert(data.detail || 'Authentication failed');
+            data = await authService.register(email, password);
+        }
+
+        // Token is already set in localStorage by authService
+
+        // Attempt to fetch latest analysis
+        const historyData = await authService.fetchLatestAnalysis();
+        
+        if (historyData) {
+            navigate('/results', { state: { analysisResult: historyData } });
+        } else {
+            navigate('/input');
         }
     } catch (error) {
-        alert('Failed to connect to server. Ensure backend is running.');
         console.error(error);
+        alert(error.detail || 'Authentication failed');
     } finally {
         setLoading(false);
     }

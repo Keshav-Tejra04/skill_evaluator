@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Save, User, ArrowLeft, LogOut } from 'lucide-react';
+import userService from '../services/user.service';
+import analysisService from '../services/analysis.service';
+import authService from '../services/auth.service';
 
 const ProfilePage = () => {
     const navigate = useNavigate();
@@ -25,17 +28,12 @@ const ProfilePage = () => {
         if (!token) { navigate('/'); return; }
         
         try {
-            const res = await fetch('http://127.0.0.1:8000/profile', {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const data = await userService.getProfile();
+            setFormData({
+                age: data.age || '',
+                current_status: data.current_status || '',
+                target_role: data.target_role || ''
             });
-            if (res.ok) {
-                const data = await res.json();
-                setFormData({
-                    age: data.age || '',
-                    current_status: data.current_status || '',
-                    target_role: data.target_role || ''
-                });
-            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -45,7 +43,6 @@ const ProfilePage = () => {
 
     const handleSave = async () => {
         setSaving(true);
-        const token = localStorage.getItem('token');
         try {
             // Convert age to int if present
             const payload = {
@@ -53,21 +50,9 @@ const ProfilePage = () => {
                 age: formData.age ? parseInt(formData.age) : null
             };
             
-            const res = await fetch('http://127.0.0.1:8000/profile', {
-                method: 'PUT',
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            if (res.ok) {
-                // Show Rerun Modal
-                setShowRerunModal(true);
-            } else {
-                alert("Failed to save");
-            }
+            await userService.updateProfile(payload);
+            // Show Rerun Modal
+            setShowRerunModal(true);
         } catch (e) {
             console.error(e);
             alert("Error saving profile");
@@ -78,22 +63,12 @@ const ProfilePage = () => {
 
     const handleRerun = async () => {
         setSaving(true);
-        const token = localStorage.getItem('token');
         try {
-            const res = await fetch('http://127.0.0.1:8000/analyze/rerun', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const result = await res.json();
-                navigate('/results', { state: { analysisResult: result } });
-            } else {
-                alert("Could not re-run analysis (maybe no history?).");
-                setShowRerunModal(false);
-            }
+            const result = await analysisService.rerunAnalysis();
+            navigate('/results', { state: { analysisResult: result } });
         } catch (e) {
             console.error(e);
-            alert("Failed to connect for re-run");
+            alert("Could not re-run analysis (maybe no history?).");
             setShowRerunModal(false);
         } finally {
             setSaving(false);
@@ -109,7 +84,7 @@ const ProfilePage = () => {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
+        authService.logout();
         navigate('/');
     };
 

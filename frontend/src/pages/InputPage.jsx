@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, Briefcase, FileText, CheckCircle2, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
+import userService from '../services/user.service';
+import analysisService from '../services/analysis.service';
 
 const InputPage = () => {
     const navigate = useNavigate();
@@ -29,23 +31,18 @@ const InputPage = () => {
             if (!token) return;
 
             try {
-                const res = await fetch('http://127.0.0.1:8000/profile', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.age) setAge(data.age);
-                    if (data.current_status) setStatus(data.current_status);
-                    
-                    // Handle pre-filling role
-                    if (data.target_role) {
-                        const defaultRoles = ["frontend-dev", "backend-dev", "data-scientist", "product-manager", "financial-analyst"];
-                        if (defaultRoles.includes(data.target_role)) {
-                            setRole(data.target_role);
-                        } else {
-                            setRole("other");
-                            setCustomRole(data.target_role);
-                        }
+                const data = await userService.getProfile();
+                if (data.age) setAge(data.age);
+                if (data.current_status) setStatus(data.current_status);
+                
+                // Handle pre-filling role
+                if (data.target_role) {
+                    const defaultRoles = ["frontend-dev", "backend-dev", "data-scientist", "product-manager", "financial-analyst"];
+                    if (defaultRoles.includes(data.target_role)) {
+                        setRole(data.target_role);
+                    } else {
+                        setRole("other");
+                        setCustomRole(data.target_role);
                     }
                 }
             } catch (e) {
@@ -117,24 +114,11 @@ const InputPage = () => {
                 return;
             }
 
-            const response = await fetch('http://127.0.0.1:8000/analyze', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.detail || 'Analysis failed');
-            }
-
-            const result = await response.json();
+            const result = await analysisService.analyzeProfile(formData);
             navigate('/results', { state: { analysisResult: result } });
 
         } catch (error) {
-            alert(error.message);
+            alert(error.detail || error.message || 'Analysis failed');
         } finally {
             setLoading(false);
         }
