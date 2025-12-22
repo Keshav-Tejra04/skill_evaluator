@@ -1,8 +1,15 @@
 import axios from 'axios';
 
 // Create axios instance
+let baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+// Render provides the host (e.g. example.onrender.com) without protocol via 'host' property
+if (baseURL && !baseURL.startsWith('http')) {
+    baseURL = `https://${baseURL}`;
+}
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
     },
