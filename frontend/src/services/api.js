@@ -8,6 +8,11 @@ if (baseURL && !baseURL.startsWith('http')) {
     baseURL = `https://${baseURL}`;
 }
 
+// Remove trailing slash if present
+if (baseURL.endsWith('/')) {
+    baseURL = baseURL.slice(0, -1);
+}
+
 const api = axios.create({
     baseURL,
     headers: {
