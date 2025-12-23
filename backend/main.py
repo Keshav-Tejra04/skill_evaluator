@@ -17,7 +17,7 @@ app = FastAPI()
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Reverting to ALL for debugging
+    allow_origins=["*"], # Allow ALL origins (Vercel, Localhost, etc.)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
