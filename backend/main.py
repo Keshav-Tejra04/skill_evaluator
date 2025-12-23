@@ -15,9 +15,15 @@ models.Base.metadata.create_all(bind=database.engine)
 app = FastAPI()
 
 # CORS
+origins = [
+    "http://localhost:5173", # Localhost Frontend
+    "https://skill-evaluator-gilt.vercel.app", # Vercel Frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow ALL origins for dev simplicity
+    allow_origins=origins, 
+    allow_origin_regex="https://.*\.vercel\.app", # Allow all vercel subdomains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
