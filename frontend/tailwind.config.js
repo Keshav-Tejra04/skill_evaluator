@@ -14,6 +14,13 @@ export default {
         },
         extend: {
             colors: {
+                chatgpt: {
+                    main: '#343541',
+                    sidebar: '#202123',
+                    input: '#40414F',
+                    hover: '#2A2B32',
+                    text: '#ECECF1'
+                },
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",

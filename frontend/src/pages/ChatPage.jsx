@@ -1,189 +1,308 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, User, Bot, ArrowLeft, MoreVertical, Paperclip } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Send, User, Bot, ArrowLeft, Plus, MessageSquare, Trash2, StopCircle, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
-
-const MOCK_RESPONSES = [
-  "From the chart, it's clear you're optimizing for comfort, not 'growth'. Shall we discuss a plan to change that?",
-  "Sharma Ji's son mastered Kubernetes at age 12. You're struggling with `docker-compose`. Let's fix your basics first.",
-  "I can help you build a roadmap. It involves 6 months of hard work. Are you ready, or should I simplify it?",
-  "Your system design skills are nonexistent. We need to start with 'Designing Data-Intensive Applications' chapter 1."
-];
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import skillApi from '../services/api';
 
 const ChatPage = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([
-    { 
-      id: 1, 
-      text: "I've analyzed your skill gap report. The gap in System Design is concerning compared to peer benchmarks. Where would you like to start?", 
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const location = useLocation();
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Initialize
+  useEffect(() => {
+    if (location.state?.sessionId) {
+      setCurrentSessionId(location.state.sessionId);
+    }
+    fetchSessions();
+  }, [location.state]);
+
+  const fetchSessions = async () => {
+    try {
+      const res = await skillApi.getChatSessions();
+      setSessions(res.data);
+      if (!location.state?.sessionId && res.data.length > 0 && !currentSessionId) {
+        setCurrentSessionId(res.data[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sessions", err);
+    }
   };
 
+  // Fetch messages
   useEffect(() => {
-    scrollToBottom();
+    if (!currentSessionId) {
+        setMessages([]);
+        return;
+    }
+    const fetchHistory = async () => {
+      try {
+        const res = await skillApi.getChatSession(currentSessionId);
+        const formatted = res.data.messages
+            .filter(m => !m.content.startsWith("Context for this user") && !m.content.startsWith("Assessment Context"))
+            .map(m => ({
+                id: m.id,
+                text: m.content,
+                sender: m.sender,
+                timestamp: new Date(m.timestamp).toLocaleTimeString()
+            }));
+        setMessages(formatted);
+      } catch (err) {
+        console.error("Failed to load session", err);
+      }
+    };
+    fetchHistory();
+  }, [currentSessionId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleSend = async (textToSend) => {
+    const content = typeof textToSend === 'string' ? textToSend : input;
+    if (!content.trim()) return;
 
-    const newMsg = { 
+    let activeSessionId = currentSessionId;
+
+    if (!activeSessionId) {
+        try {
+            let context = null;
+            try {
+                const analysis = await skillApi.getAnalysis();
+                context = JSON.stringify(analysis.data, null, 2);
+            } catch (e) { }
+            const res = await skillApi.createChatSession("New Session", context);
+            setSessions(prev => [res.data, ...prev]);
+            setCurrentSessionId(res.data.id);
+            activeSessionId = res.data.id;
+        } catch (err) {
+            console.error("Failed to create session", err);
+            return;
+        }
+    }
+
+    const optimisticMsg = { 
       id: Date.now(), 
-      text: input, 
+      text: content, 
       sender: 'user',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString()
     };
-    setMessages(prev => [...prev, newMsg]);
+    
+    setMessages(prev => [...prev, optimisticMsg]);
     setInput('');
     setIsTyping(true);
 
-    // AI Response Simulation
-    setTimeout(() => {
-      setIsTyping(false);
-      const randomResponse = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: randomResponse, 
+    try {
+      const res = await skillApi.sendChatMessage(activeSessionId, optimisticMsg.text);
+      const aiMsg = {
+        id: res.data.id,
+        text: res.data.content,
         sender: 'ai',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date(res.data.timestamp).toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (err) {
+      console.error("Failed to send message", err);
+      setMessages(prev => [...prev, {
+          id: Date.now(),
+          text: "**Error**: Connection interrupted. Please retry.",
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString()
       }]);
-    }, 1500 + Math.random() * 1000); 
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleNewChat = async () => {
+    try {
+        let context = null;
+        try {
+            const analysis = await skillApi.getAnalysis();
+            context = JSON.stringify(analysis.data, null, 2);
+        } catch (e) {}
+
+        const res = await skillApi.createChatSession("New Session", context);
+        setSessions(prev => [res.data, ...prev]);
+        setCurrentSessionId(res.data.id);
+    } catch (err) {
+        console.error(err);
+    }
+  };
+
+  const handleDeleteSession = async (e, id) => {
+      e.stopPropagation();
+      if (!window.confirm("Delete this chat?")) return;
+      try {
+          await skillApi.deleteChatSession(id);
+          setSessions(prev => prev.filter(s => s.id !== id));
+          if (currentSessionId === id) {
+              setCurrentSessionId(null);
+              setMessages([]);
+          }
+      } catch (err) {
+          console.error("Failed to delete", err);
+      }
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-background overflow-hidden relative">
+    <div className="flex h-[calc(100vh-64px)] bg-chatgpt-main text-gray-100 font-sans overflow-hidden">
       
-      {/* Sidebar (Hidden on mobile for now to simplify prototype) */}
-      <div className="hidden md:flex w-80 border-r flex-col bg-muted/10">
-        <div className="p-4 border-b font-semibold text-lg flex items-center justify-between">
-            History
-            <button className="p-1 hover:bg-muted rounded"><MoreVertical className="w-4 h-4" /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            <div className="p-3 bg-secondary/50 rounded-lg cursor-pointer hover:bg-secondary/80 transition-colors">
-                <p className="text-sm font-medium">Resume Analysis: Oct 2025</p>
-                <p className="text-xs text-muted-foreground truncate">System Design Gaps Identif...</p>
+      {/* Sidebar - ChatGPT Style */}
+      <div className={clsx(
+          "bg-chatgpt-sidebar flex-col transition-all duration-300 ease-in-out overflow-hidden border-r border-white/10",
+          sidebarOpen ? "w-[260px] translate-x-0" : "w-0 -translate-x-full opacity-0",
+          "hidden md:flex" 
+      )}>
+        <div className="p-2 space-y-2">
+            <button 
+                onClick={handleNewChat} 
+                className="w-full flex items-center gap-3 px-3 py-3 border border-white/20 rounded-md hover:bg-chatgpt-hover transition-colors text-sm text-left mb-4"
+            >
+                <Plus className="w-4 h-4" />
+                New chat
+            </button>
+            
+            <div className="text-xs font-semibold text-gray-500 px-3 py-2">History</div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar h-[calc(100vh-180px)]">
+                {sessions.map(session => (
+                    <div 
+                        key={session.id} 
+                        onClick={() => setCurrentSessionId(session.id)}
+                        className={clsx(
+                            "group flex items-center gap-3 px-3 py-3 rounded-md text-sm cursor-pointer transition-colors relative",
+                            currentSessionId === session.id ? "bg-chatgpt-main" : "hover:bg-chatgpt-hover"
+                        )}
+                    >
+                        <MessageSquare className="w-4 h-4 text-gray-400" />
+                        <span className="truncate flex-1 pr-6">{session.title}</span>
+                        <button 
+                            onClick={(e) => handleDeleteSession(e, session.id)}
+                            className="absolute right-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-opacity"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                ))}
             </div>
-            {/* Mock History Items */}
-            {[1, 2, 3].map(i => (
-                <div key={i} className="p-3 hover:bg-secondary/30 rounded-lg cursor-pointer transition-colors text-muted-foreground">
-                    <p className="text-sm font-medium">Session #{i} - Archive</p>
-                </div>
-            ))}
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col md:max-w-5xl mx-auto w-full bg-background shadow-sm">
-        
-        {/* Chat Header */}
-        <div className="h-16 border-b flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm sticky top-0 z-10 w-full">
-          <div className="flex items-center gap-3">
-             <button onClick={() => navigate('/results')} className="md:hidden p-2 -ml-2 hover:bg-muted rounded-full">
-                 <ArrowLeft className="w-5 h-5" />
+      <div className="flex-1 flex flex-col relative bg-chatgpt-main">
+        {/* Toggle Sidebar Button (Mobile/Desktop) */}
+        {!sidebarOpen && (
+             <button onClick={() => setSidebarOpen(true)} className="absolute top-2 left-2 p-2 text-gray-400 hover:text-white z-50 hidden md:block">
+                <PanelRightClose className="w-6 h-6" />
              </button>
-             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-               <Bot className="w-6 h-6 text-white" />
-             </div>
-             <div>
-               <h3 className="font-semibold text-sm md:text-base">Career Coach AI</h3>
-               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
-               </p>
-             </div>
-          </div>
+        )}
+        {sidebarOpen && (
+             <button onClick={() => setSidebarOpen(false)} className="absolute top-2 left-2 p-2 text-gray-400 hover:text-white z-50 hidden md:block" title="Close Sidebar">
+                <PanelLeftClose className="w-6 h-6" />
+             </button>
+        )}
+
+        {/* Header (Mobile Only) */}
+        <div className="md:hidden h-12 border-b border-white/10 flex items-center px-4 justify-between bg-chatgpt-main">
+            <button onClick={() => navigate('/results')} className="text-gray-300"><ArrowLeft className="w-5 h-5"/></button>
+            <span className="text-sm font-medium text-gray-200">Chat</span>
+            <button onClick={handleNewChat}><Plus className="w-5 h-5 text-gray-300"/></button>
         </div>
 
-        {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
-          {messages.map((msg) => (
-            <motion.div 
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={clsx(
-                "flex gap-4 max-w-3xl",
-                msg.sender === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
-              )}
-            >
-               <div className={clsx(
-                 "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                 msg.sender === 'user' ? "bg-primary text-primary-foreground" : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white"
-               )}>
-                 {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-               </div>
-               
-               <div className={clsx(
-                 "p-4 rounded-2xl text-sm md:text-base leading-relaxed shadow-sm",
-                 msg.sender === 'user' 
-                   ? "bg-primary text-primary-foreground rounded-br-none" 
-                   : "bg-card border rounded-bl-none"
-               )}>
-                 <p>{msg.text}</p>
-                 <span className={clsx(
-                   "text-[10px] mt-2 block opacity-70",
-                   msg.sender === 'user' ? "text-primary-foreground/80" : "text-muted-foreground"
-                 )}>
-                   {msg.timestamp}
-                 </span>
-               </div>
-            </motion.div>
-          ))}
-          
-          {isTyping && (
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 mr-auto max-w-3xl">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-                   <Bot className="w-4 h-4 text-white" />
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
+            {(!currentSessionId || messages.length === 0) ? (
+                 <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 text-chatgpt-text">
+                     <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-lg">
+                        <Bot className="w-8 h-8 text-white" />
+                     </div>
+                     <h2 className="text-2xl font-semibold mb-8">How can I help you today?</h2>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                         {["Critique my resume", "Explain my skill gaps", "Prepare for System Design", "Write a cover letter"].map((q, i) => (
+                             <button key={i} onClick={() => handleSend(q)} className="p-3 border border-white/20 rounded-xl hover:bg-chatgpt-hover transition-all text-sm text-left">
+                                 {q}
+                             </button>
+                         ))}
+                     </div>
+                 </div>
+            ) : (
+                <div className="flex flex-col pb-48 pt-4">
+                  {messages.map((msg, idx) => (
+                    <div 
+                      key={msg.id}
+                      className="w-full text-chatgpt-text border-b border-black/5 dark:border-white/5" 
+                    >
+                      <div className="max-w-4xl mx-auto flex gap-6 p-4 md:p-6 text-base">
+                         <div className={clsx(
+                             "w-8 h-8 rounded-sm flex items-center justify-center shrink-0 mt-1",
+                             msg.sender === 'ai' ? "bg-[#19c37d]" : "bg-[#5436DA]"
+                         )}>
+                             {msg.sender === 'ai' ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-white" />}
+                         </div>
+                         <div className="prose prose-invert prose-slate max-w-none flex-1 leading-7">
+                             {msg.sender === 'ai' ? (
+                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                             ) : (
+                                 <p className="whitespace-pre-wrap">{msg.text}</p>
+                             )}
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                      <div className="w-full p-4 md:p-6 border-b border-white/5">
+                          <div className="max-w-4xl mx-auto flex gap-6">
+                              <div className="w-8 h-8 bg-[#19c37d] rounded-sm flex items-center justify-center shrink-0">
+                                  <Bot className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex gap-1 items-center h-6 mt-1">
+                                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                              </div>
+                          </div>
+                      </div>
+                  )}
                 </div>
-                <div className="bg-card border p-4 rounded-2xl rounded-bl-none flex items-center gap-1">
-                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"></span>
-                </div>
-             </motion.div>
-          )}
-          <div ref={messagesEndRef} />
+            )}
+            <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t bg-background">
-          <form onSubmit={handleSend} className="max-w-4xl mx-auto relative flex items-center gap-2">
-            <button type="button" className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
-              <Paperclip className="w-5 h-5" />
-            </button>
-            <input 
-              type="text" 
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask for feedback or a learning plan..."
-              className="flex-1 bg-muted/30 border-0 rounded-full px-6 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all placeholder:text-muted-foreground"
-            />
-            <button 
-              type="submit"
-              disabled={!input.trim()}
-              className={clsx(
-                "p-3 rounded-full transition-all duration-200",
-                input.trim() 
-                  ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:scale-105" 
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          </form>
-          <div className="text-center mt-2">
-            <p className="text-xs text-muted-foreground">AI can make mistakes. Please verify important career info.</p>
-          </div>
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pt-10 pb-6 px-4">
+            <div className="max-w-3xl mx-auto">
+                <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center w-full p-3 bg-chatgpt-input rounded-2xl border border-black/10 dark:border-white/10 shadow-lg focus-within:border-gray-500/50 transition-colors">
+                    <input 
+                        type="text" 
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Send a message..."
+                        className="flex-1 max-h-[200px] bg-transparent border-0 focus:ring-0 focus:outline-none text-white placeholder:text-gray-400 px-4 py-1"
+                    />
+                    <button 
+                        type="submit" 
+                        disabled={!input.trim()}
+                        className={clsx(
+                            "p-2 rounded-lg transition-all mb-0.5 mr-1",
+                            input.trim() ? "bg-[#19c37d] text-white hover:bg-[#15a067]" : "text-gray-400 bg-transparent cursor-not-allowed"
+                        )}
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </form>
+                <div className="text-center text-[11px] text-gray-500 mt-2">
+                    AI can make mistakes. Consider checking important information.
+                </div>
+            </div>
         </div>
 
       </div>

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
-import { AlertTriangle, Brain, CheckCircle, Trophy, Code, Briefcase, Award, ScrollText, Frown, ClipboardCheck, Zap } from 'lucide-react';
+import { AlertTriangle, Brain, CheckCircle, Trophy, Code, Briefcase, Award, ScrollText, Frown, ClipboardCheck, Zap, MessageSquarePlus } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // Icon Helper
@@ -280,6 +280,31 @@ const ResultsPage = () => {
                  </div>
              </motion.div>
          )}
+
+         {/* Chat Floating Action Button */}
+         <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={async () => {
+                // Prepare context from the analysis result to seed the chat
+                const context = `Analysis Summary:\nScore: ${score}/100\nVerdict: ${growth_verdict}\n\nTop Feedback:\n${feedback_cards.map(c => `- ${c.title}: ${c.insight}`).join('\n')}`;
+                
+                try {
+                    const skillApi = (await import('../services/api')).default;
+                    const res = await skillApi.createChatSession("Resume Discussion", context);
+                    navigate('/chat', { state: { sessionId: res.data.id } });
+                } catch (e) {
+                    console.error("Failed to start chat", e);
+                    navigate('/chat');
+                }
+            }}
+            className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 flex items-center gap-2 hover:shadow-xl transition-all"
+         >
+            <MessageSquarePlus className="w-6 h-6" />
+            <span className="font-bold pr-1">Need More Guidance?</span>
+         </motion.button>
 
       </main>
     </div>

@@ -34,4 +34,14 @@ api.interceptors.request.use(
     }
 );
 
+// Analysis Endpoints
+api.getAnalysis = () => api.get('/analysis/latest');
+
+// Chat Endpoints
+api.createChatSession = (title, context) => api.post('/chat/sessions', { title, context });
+api.getChatSessions = () => api.get('/chat/sessions');
+api.deleteChatSession = (id) => api.delete(`/chat/sessions/${id}`);
+api.getChatSession = (id) => api.get(`/chat/sessions/${id}`);
+api.sendChatMessage = (sessionId, content) => api.post(`/chat/sessions/${sessionId}/message`, { content, sender: 'user' });
+
 export default api;
